@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { submissionId, articleId } = await req.json();
+    const { submissionId } = await req.json();
 
     const client = await clientPromise;
     const db = client.db('blog-platform');
@@ -34,18 +34,33 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update article status to published
-    await blogs.updateOne(
-      { _id: new ObjectId(articleId) },
-      {
-        $set: {
-          status: 'published',
-          reviewStatus: 'approved',
-          publishedAt: new Date(),
-          reviewedBy: session.user.email,
-        },
-      }
-    );
+    // Create published blog from submission
+    const newBlog = {
+      title: submission.title,
+      slug: submission.slug,
+      content: submission.content,
+      excerpt: submission.excerpt || submission.content.replace(/<[^>]*>/g, '').substring(0, 200),
+      coverImage: submission.coverImage || '',
+      category: submission.category,
+      tags: submission.tags || [],
+      status: 'published',
+      featured: false, // Admin can manually feature it later
+      author: {
+        id: submission.authorId,
+        name: submission.authorName,
+        email: submission.authorEmail,
+      },
+      views: 0,
+      likes: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      publishedAt: new Date(),
+      reviewedBy: session.user.email,
+      originalSubmissionId: submissionId,
+    };
+
+    // Insert the blog into the blogs collection
+    const blogResult = await blogs.insertOne(newBlog);
 
     // Update submission status
     await submissions.updateOne(
@@ -55,13 +70,13 @@ export async function POST(req: NextRequest) {
           status: 'approved',
           reviewedAt: new Date(),
           reviewedBy: session.user.email,
+          publishedBlogId: blogResult.insertedId,
         },
       }
     );
 
     // Send approval email to author
     try {
-      const article = await blogs.findOne({ _id: new ObjectId(articleId) });
       
       await resend.emails.send({
         from: 'Stively Team <team@stively.com>',
@@ -77,10 +92,10 @@ export async function POST(req: NextRequest) {
               <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h1 style="color: #667eea;">Congratulations! 🎉</h1>
                 
-                <p>Great news! Your article "<strong>${article?.title}</strong>" has been approved and published on Stively.</p>
+                <p>Great news! Your article "<strong>${submission.title}</strong>" has been approved and published on Stively.</p>
                 
                 <div style="background: #f8f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/blog/${article?.slug}" 
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/blog/${submission.slug}" 
                      style="display: inline-block; background: linear-gradient(to right, #667eea, #764ba2); color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                     View Your Published Article
                   </a>
