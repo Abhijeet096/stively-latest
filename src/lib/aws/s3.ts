@@ -13,6 +13,14 @@ export async function uploadToS3(
   fileName: string,
   contentType: string
 ): Promise<string> {
+  console.log('🔧 S3 Upload Debug:', {
+    bucket: process.env.AWS_S3_BUCKET,
+    region: process.env.AWS_REGION,
+    hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+    hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+    fileName
+  });
+
   const key = `blog-images/${Date.now()}-${fileName}`;
 
   const command = new PutObjectCommand({
@@ -22,9 +30,15 @@ export async function uploadToS3(
     ContentType: contentType,
   });
 
-  await s3Client.send(command);
-
-  return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  try {
+    await s3Client.send(command);
+    const url = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    console.log('✅ S3 Upload Success:', url);
+    return url;
+  } catch (error) {
+    console.error('❌ S3 Upload Error:', error);
+    throw error;
+  }
 }
 
 export async function deleteFromS3(fileUrl: string): Promise<void> {
