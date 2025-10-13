@@ -19,11 +19,11 @@ export const metadata: Metadata = {
   publisher: 'Stively',
   icons: {
     icon: [
-      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261' },
-      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261', sizes: '32x32', type: 'image/png' },
+      { url: '/stively-fevicon.png' },
+      { url: '/stively-fevicon.png', sizes: '32x32', type: 'image/png' },
     ],
     apple: [
-      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261', sizes: '180x180', type: 'image/png' },
+      { url: '/stively-fevicon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
