@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { authOptions } from '@/lib/auth';
 import clientPromise from '@/lib/db/mongodb';
 import { ObjectId } from 'mongodb';
 import { Resend } from 'resend';
