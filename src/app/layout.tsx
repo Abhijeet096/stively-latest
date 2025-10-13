@@ -6,6 +6,15 @@ import SessionProvider from "@/components/SessionProvider";
 export const metadata: Metadata = {
   title: "Stively - Discover Inspiring Stories",
   description: "Read curated articles across technology, lifestyle, business, and more",
+  icons: {
+    icon: [
+      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261' },
+      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: 'https://ik.imagekit.io/stivelyimages/Stively-images/stively-fevicon.png?updatedAt=1760326946261', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({
