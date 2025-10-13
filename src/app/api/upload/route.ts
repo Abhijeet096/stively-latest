@@ -4,6 +4,7 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
 export async function POST(req: Request) {
+  console.log('🎯 UPLOAD API CALLED - Site is updated!', new Date());
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
