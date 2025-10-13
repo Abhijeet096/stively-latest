@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, 
-  PenTool, 
-  FileText, 
-  Mail, 
+import {
+  LayoutDashboard,
+  PenTool,
+  FileText,
+  Mail,
   BarChart3,
   Users,
-  CheckSquare
+  CheckSquare,
 } from 'lucide-react';
 
 export default function AdminSidebar() {
@@ -35,13 +35,11 @@ export default function AdminSidebar() {
       name: 'Manage Authors',
       href: '/admin/authors',
       icon: Users,
-      badge: 'New',
     },
     {
       name: 'Review Submissions',
       href: '/admin/submissions',
       icon: CheckSquare,
-      badge: 'New',
     },
     {
       name: 'Newsletter',
@@ -56,11 +54,11 @@ export default function AdminSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-white border-r min-h-screen p-6">
-      <nav className="space-y-2">
+    <aside className="w-64 bg-white border-r min-h-screen sticky top-[73px] self-start">
+      <nav className="p-4 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
 
           return (
             <Link
@@ -74,11 +72,6 @@ export default function AdminSidebar() {
             >
               <Icon size={20} />
               <span>{item.name}</span>
-              {item.badge && (
-                <span className="ml-auto text-xs bg-purple-600 text-white px-2 py-1 rounded-full">
-                  {item.badge}
-                </span>
-              )}
             </Link>
           );
         })}
