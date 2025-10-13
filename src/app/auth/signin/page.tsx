@@ -34,7 +34,7 @@ export default function SignInPage() {
         setError(result.error);
       } else if (result?.ok) {
         // Redirect based on role (will be handled by middleware/session)
-        router.push('/author/dashboard');
+        router.push('/author');
         router.refresh();
       }
     } catch (error) {
