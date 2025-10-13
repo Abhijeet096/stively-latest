@@ -17,6 +17,11 @@ export default function SignInPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Get callback URL from search params
+  const callbackUrl = typeof window !== 'undefined' 
+    ? new URLSearchParams(window.location.search).get('callbackUrl') || '/author'
+    : '/author';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +38,8 @@ export default function SignInPage() {
       if (result?.error) {
         setError(result.error);
       } else if (result?.ok) {
-        // Redirect based on role (will be handled by middleware/session)
-        router.push('/author');
+        // Redirect to callback URL or default to author dashboard
+        router.push(callbackUrl);
         router.refresh();
       }
     } catch (error) {

@@ -109,11 +109,8 @@ export async function POST(req: NextRequest) {
                 </p>
                 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/auth/signin" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3); margin-right: 10px;">
-                    Sign In
-                  </a>
-                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/author" style="background: transparent; color: #667eea; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block; border: 2px solid #667eea;">
-                    View Dashboard
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL}/auth/signin?callbackUrl=/author" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+                    🚀 Access Author Dashboard
                   </a>
                 </div>
                 
