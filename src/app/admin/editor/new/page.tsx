@@ -54,9 +54,6 @@ export default function NewArticlePage() {
 
   const handleSubmit = async (status: 'draft' | 'published') => {
     console.log('🚀 Starting submission...');
-    console.log('Status:', status);
-    console.log('Form data:', formData);
-    console.log('Content length:', content.length);
 
     // Validation
     if (!formData.title || !formData.title.trim()) {
@@ -80,24 +77,30 @@ export default function NewArticlePage() {
       // Upload cover image if exists
       let coverImageUrl = '';
       if (coverImage) {
-        console.log('📤 Uploading image...');
-        const imageFormData = new FormData();
-        imageFormData.append('file', coverImage);
-        
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: imageFormData,
-        });
+        try {
+          console.log('📤 Uploading image...');
+          const imageFormData = new FormData();
+          imageFormData.append('file', coverImage);
+          
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: imageFormData,
+          });
 
-        if (!uploadRes.ok) {
-          const errorData = await uploadRes.json();
-          console.error('Image upload error:', errorData);
-          throw new Error('Failed to upload image: ' + (errorData.error || 'Unknown error'));
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            coverImageUrl = uploadData.url;
+            console.log('✅ Image uploaded:', coverImageUrl);
+          } else {
+            // If image upload fails, continue without image
+            console.warn('⚠️ Image upload failed, continuing without image');
+            const errorData = await uploadRes.json().catch(() => ({}));
+            console.error('Upload error:', errorData);
+          }
+        } catch (uploadError) {
+          // If image upload fails, continue without image
+          console.warn('⚠️ Image upload error, continuing without image:', uploadError);
         }
-        
-        const uploadData = await uploadRes.json();
-        coverImageUrl = uploadData.url;
-        console.log('✅ Image uploaded:', coverImageUrl);
       }
 
       // Prepare article data
@@ -106,7 +109,7 @@ export default function NewArticlePage() {
         slug: formData.slug.trim() || generateSlug(formData.title),
         content: content,
         excerpt: formData.excerpt.trim() || content.replace(/<[^>]*>/g, '').substring(0, 200),
-        coverImage: coverImageUrl,
+        coverImage: coverImageUrl, // Will be empty string if upload failed
         category: formData.category,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         status: status,
@@ -126,19 +129,25 @@ export default function NewArticlePage() {
       console.log('📥 Response status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('API error:', errorData);
+        const errorText = await response.text();
+        console.error('API error:', errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
         throw new Error(errorData.error || 'Failed to create article');
       }
 
       const data = await response.json();
       console.log('✅ Article created:', data);
       
-      alert(
-        status === 'published' 
-          ? `Article published${formData.featured ? ' as Featured' : ''}!` 
-          : 'Draft saved!'
-      );
+      const message = status === 'published' 
+        ? `Article published${formData.featured ? ' as Featured' : ''}!${!coverImageUrl && coverImage ? ' (Note: Cover image upload failed)' : ''}` 
+        : 'Draft saved!';
+      
+      alert(message);
       
       router.push('/admin');
       
