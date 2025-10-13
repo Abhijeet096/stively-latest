@@ -1,15 +1,73 @@
 import Image from "next/image";
-import WelcomePopup from "@/components/WelcomePopup";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, TrendingUp, BookOpen, Users } from "lucide-react";
-import Footer from "@/components/Footer";
-import NewsletterSection from "@/components/NewsletterSection";
 import FooterNewsletter from "@/components/FooterNewsletter";
+import WelcomePopup from "@/components/WelcomePopup";
+import clientPromise from "@/lib/db/mongodb";
+import FeaturedArticleCard from "@/components/FeaturedArticleCard";
 
-export default function Home() {
+async function getFeaturedArticles() {
+  try {
+    const client = await clientPromise;
+    const db = client.db('blog-platform');
+    
+    const articles = await db
+      .collection('blogs')
+      .find({ status: 'published' })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .toArray();
+
+    return articles.map(article => ({
+      id: article._id.toString(),
+      title: article.title,
+      excerpt: article.excerpt || article.content.substring(0, 150) + '...',
+      slug: article.slug,
+      category: article.category || 'Technology',
+      coverImage: article.coverImage,
+      createdAt: article.createdAt,
+      readTime: article.readTime || '5 min read',
+    }));
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    return [];
+  }
+}
+
+async function getLatestArticles() {
+  try {
+    const client = await clientPromise;
+    const db = client.db('blog-platform');
+    
+    const articles = await db
+      .collection('blogs')
+      .find({ status: 'published' })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+
+    return articles.map(article => ({
+      id: article._id.toString(),
+      title: article.title,
+      excerpt: article.excerpt || article.content.substring(0, 150) + '...',
+      slug: article.slug,
+      category: article.category || 'Technology',
+      coverImage: article.coverImage,
+      createdAt: article.createdAt,
+      readTime: article.readTime || '5 min read',
+    }));
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    return [];
+  }
+}
+
+export default async function Home() {
+  const featuredArticles = await getFeaturedArticles();
+  const latestArticles = await getLatestArticles();
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Hero Section */}
@@ -81,29 +139,20 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <Link href={`/blog/article-${i}`} key={i}>
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-2 duration-300">
-                  <div className="h-48 bg-gradient-to-br from-purple-400 to-blue-400" />
-                  <div className="p-6">
-                    <Badge className="mb-3 bg-purple-100 text-purple-700">Technology</Badge>
-                    <h3 className="text-xl font-bold mb-2 line-clamp-2">
-                      Amazing Article Title {i}
-                    </h3>
-                    <p className="text-slate-600 mb-4 line-clamp-3">
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.
-                    </p>
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <span>5 min read</span>
-                      <span>•</span>
-                      <span>Dec 1, 2024</span>
-                    </div>
-                  </div>
-                </div>
+          {featuredArticles.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {featuredArticles.map((article) => (
+                <FeaturedArticleCard key={article.id} article={article} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No articles published yet</p>
+              <Link href="/admin">
+                <Button>Create Your First Article</Button>
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Link href="/blog">
@@ -221,56 +270,63 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Latest Articles Preview */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="text-4xl font-bold mb-2 text-slate-900">Latest Articles</h2>
-              <p className="text-slate-600">Fresh content published recently</p>
+      {/* Latest Articles */}
+      {latestArticles.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center mb-12">
+              <div>
+                <h2 className="text-4xl font-bold mb-2">Latest Articles</h2>
+                <p className="text-slate-600">Fresh content published recently</p>
+              </div>
+              <Link href="/blog">
+                <Button variant="outline">View All →</Button>
+              </Link>
             </div>
-            <Link href="/blog">
-              <Button variant="outline" className="hidden sm:flex">
-                View All →
-              </Button>
-            </Link>
-          </div>
 
-          <div className="grid gap-8 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="premium-card overflow-hidden">
-                <div className="h-48 bg-gradient-to-br from-purple-200 to-blue-200"></div>
-                <CardHeader>
-                  <div className="flex gap-2 mb-2">
-                    <Badge variant="secondary">Technology</Badge>
+            <div className="grid md:grid-cols-3 gap-8">
+              {latestArticles.map((article) => (
+                <Link href={`/blog/${article.slug}`} key={article.id}>
+                  <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-2 duration-300 border">
+                    <div className="h-48 bg-gradient-to-br from-purple-400 to-blue-400 relative">
+                      {article.coverImage && (
+                        <Image
+                          src={article.coverImage}
+                          alt={article.title}
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="p-6">
+                      <Badge className="mb-3 bg-purple-100 text-purple-700">
+                        {article.category}
+                      </Badge>
+                      <h3 className="text-xl font-bold mb-2 line-clamp-2">
+                        {article.title}
+                      </h3>
+                      <p className="text-slate-600 mb-4 line-clamp-3">
+                        {article.excerpt}
+                      </p>
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <span>{article.readTime}</span>
+                        <span>•</span>
+                        <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <CardTitle className="line-clamp-2">
-                    Article Title Will Appear Here
-                  </CardTitle>
-                  <CardDescription className="line-clamp-3">
-                    Article description and preview text will be displayed here to give readers a glimpse of the content...
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-slate-500">
-                    <span>5 min read</span>
-                    <span>2 days ago</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                </Link>
+              ))}
+            </div>
           </div>
+        </section>
+      )}
 
-          <div className="text-center mt-12 sm:hidden">
-            <Link href="/blog">
-              <Button variant="outline">View All Articles →</Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section - NOW FUNCTIONAL */}
+      {/* Newsletter Section */}
       <FooterNewsletter />
+
+      {/* Welcome Popup */}
+      <WelcomePopup />
 
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-12">
@@ -313,9 +369,6 @@ export default function Home() {
           </div>
         </div>
       </footer>
-
-      {/* Welcome Popup for First-Time Visitors */}
-      <WelcomePopup />
     </div>
   );
 }
