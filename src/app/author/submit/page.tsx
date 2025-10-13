@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Send, Loader2 } from 'lucide-react';
+import TiptapEditor from '@/components/editor/TiptapEditor';
+import { ArrowLeft, Send, Loader2, Upload } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SubmitArticlePage() {
@@ -16,11 +16,32 @@ export default function SubmitArticlePage() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
-    content: '',
     excerpt: '',
     category: 'Technology',
     tags: '',
   });
+  const [content, setContent] = useState('');
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,7 +51,7 @@ export default function SubmitArticlePage() {
       return;
     }
 
-    if (!formData.title.trim() || !formData.content.trim()) {
+    if (!formData.title.trim() || !content.trim() || content === '<p></p>') {
       alert('Title and content are required');
       return;
     }
@@ -38,12 +59,35 @@ export default function SubmitArticlePage() {
     setLoading(true);
 
     try {
+      // Upload cover image if exists
+      let coverImageUrl = '';
+      if (coverImage) {
+        try {
+          const imageFormData = new FormData();
+          imageFormData.append('file', coverImage);
+          
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: imageFormData,
+          });
+
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json();
+            coverImageUrl = uploadData.url;
+          }
+        } catch (uploadError) {
+          console.warn('Image upload failed, continuing without image:', uploadError);
+        }
+      }
+
       const articleData = {
         title: formData.title.trim(),
-        content: formData.content.trim(),
-        excerpt: formData.excerpt.trim() || formData.content.substring(0, 200),
+        slug: generateSlug(formData.title),
+        content: content,
+        excerpt: formData.excerpt.trim() || content.replace(/<[^>]*>/g, '').substring(0, 200),
         category: formData.category,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        coverImage: coverImageUrl,
         authorName: session.user.name,
         authorEmail: session.user.email,
       };
@@ -128,6 +172,16 @@ export default function SubmitArticlePage() {
               />
             </div>
 
+            {/* Auto-generated Slug Preview */}
+            {formData.title && (
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <Label className="text-sm font-medium text-blue-800">Article URL will be:</Label>
+                <p className="text-blue-600 font-mono text-sm mt-1">
+                  /blog/{generateSlug(formData.title)}
+                </p>
+              </div>
+            )}
+
             {/* Excerpt */}
             <div>
               <Label htmlFor="excerpt">Excerpt (Optional)</Label>
@@ -175,24 +229,58 @@ export default function SubmitArticlePage() {
               />
             </div>
 
-            {/* Content */}
+            {/* Cover Image */}
             <div>
-              <Label htmlFor="content">Article Content *</Label>
-              <Textarea
-                id="content"
-                value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Write your article content here... You can use markdown formatting."
-                className="mt-2 min-h-[400px]"
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Tip: You can use markdown formatting like **bold**, *italic*, and ## headings.
+              <Label>Cover Image (Optional)</Label>
+              <div className="mt-2">
+                {coverImagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={coverImagePreview}
+                      alt="Cover preview"
+                      className="w-full h-64 object-cover rounded-lg"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setCoverImage(null);
+                        setCoverImagePreview('');
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
+                    <Upload className="w-12 h-12 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">Click to upload cover image</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Content - Advanced Editor */}
+            <div>
+              <Label>Article Content *</Label>
+              <div className="mt-2">
+                <TiptapEditor content={content} onChange={setContent} />
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                Use the rich text editor above to format your article with headings, bold text, images, and more.
               </p>
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t">
+            <div className="flex justify-end gap-4 pt-6 border-t">
               <Button
                 type="submit"
                 disabled={loading}
@@ -210,6 +298,20 @@ export default function SubmitArticlePage() {
                   </>
                 )}
               </Button>
+            </div>
+            
+            {/* Info Box */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
+              <div className="flex items-start">
+                <div className="text-yellow-600 mr-3">ℹ️</div>
+                <div>
+                  <h4 className="font-semibold text-yellow-800 mb-1">Review Process</h4>
+                  <p className="text-yellow-700 text-sm">
+                    Your article will be submitted for admin review. You'll be notified via email once it's approved and published on the site. 
+                    You cannot edit articles after submission, so please review carefully before submitting.
+                  </p>
+                </div>
+              </div>
             </div>
           </form>
         </div>

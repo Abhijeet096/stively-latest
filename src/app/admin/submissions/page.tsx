@@ -186,8 +186,8 @@ export default function SubmissionsPage() {
 
                 {/* Content Preview */}
                 <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <p className="text-sm text-gray-700 line-clamp-3">
-                    {submission.content.replace(/<[^>]*>/g, '').substring(0, 300)}...
+                  <p className="text-sm text-gray-700">
+                    {submission.content ? submission.content.replace(/<[^>]*>/g, '').substring(0, 300) + '...' : 'No content available'}
                   </p>
                 </div>
 
