@@ -6,8 +6,7 @@ import TiptapEditor from '@/components/editor/TiptapEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'react-hot-toast';
-import { Upload, Save, Eye } from 'lucide-react';
+import { Upload, Save, Eye, Loader2 } from 'lucide-react';
 
 export default function NewArticlePage() {
   const router = useRouter();
@@ -16,10 +15,10 @@ export default function NewArticlePage() {
     title: '',
     slug: '',
     excerpt: '',
-    category: '',
+    category: 'Technology',
     tags: '',
     status: 'draft',
-    featured: false, // NEW FIELD
+    featured: false,
   });
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState<File | null>(null);
@@ -54,8 +53,24 @@ export default function NewArticlePage() {
   };
 
   const handleSubmit = async (status: 'draft' | 'published') => {
-    if (!formData.title || !content) {
-      toast.error('Title and content are required');
+    console.log('🚀 Starting submission...');
+    console.log('Status:', status);
+    console.log('Form data:', formData);
+    console.log('Content length:', content.length);
+
+    // Validation
+    if (!formData.title || !formData.title.trim()) {
+      alert('Title is required');
+      return;
+    }
+
+    if (!content || content.trim() === '' || content === '<p></p>') {
+      alert('Content is required');
+      return;
+    }
+
+    if (!formData.category) {
+      alert('Category is required');
       return;
     }
 
@@ -65,6 +80,7 @@ export default function NewArticlePage() {
       // Upload cover image if exists
       let coverImageUrl = '';
       if (coverImage) {
+        console.log('📤 Uploading image...');
         const imageFormData = new FormData();
         imageFormData.append('file', coverImage);
         
@@ -73,40 +89,62 @@ export default function NewArticlePage() {
           body: imageFormData,
         });
 
-        if (!uploadRes.ok) throw new Error('Failed to upload image');
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json();
+          console.error('Image upload error:', errorData);
+          throw new Error('Failed to upload image: ' + (errorData.error || 'Unknown error'));
+        }
         
         const uploadData = await uploadRes.json();
         coverImageUrl = uploadData.url;
+        console.log('✅ Image uploaded:', coverImageUrl);
       }
 
+      // Prepare article data
+      const articleData = {
+        title: formData.title.trim(),
+        slug: formData.slug.trim() || generateSlug(formData.title),
+        content: content,
+        excerpt: formData.excerpt.trim() || content.replace(/<[^>]*>/g, '').substring(0, 200),
+        coverImage: coverImageUrl,
+        category: formData.category,
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        status: status,
+        featured: formData.featured,
+      };
+
+      console.log('📝 Article data:', articleData);
+
       // Create article
+      console.log('📤 Sending to API...');
       const response = await fetch('/api/blogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          content,
-          coverImage: coverImageUrl,
-          status,
-          featured: formData.featured, // Include featured field
-          tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify(articleData),
       });
 
-      if (!response.ok) throw new Error('Failed to create article');
+      console.log('📥 Response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('API error:', errorData);
+        throw new Error(errorData.error || 'Failed to create article');
+      }
 
       const data = await response.json();
+      console.log('✅ Article created:', data);
       
-      toast.success(
+      alert(
         status === 'published' 
           ? `Article published${formData.featured ? ' as Featured' : ''}!` 
           : 'Draft saved!'
       );
       
       router.push('/admin');
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to save article');
+      
+    } catch (error: any) {
+      console.error('❌ Error:', error);
+      alert('Failed to save article: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -169,6 +207,7 @@ export default function NewArticlePage() {
               onChange={handleTitleChange}
               placeholder="Enter article title"
               className="mt-2"
+              required
             />
           </div>
 
@@ -186,26 +225,26 @@ export default function NewArticlePage() {
 
           {/* Excerpt */}
           <div>
-            <Label htmlFor="excerpt">Excerpt</Label>
+            <Label htmlFor="excerpt">Excerpt (Optional)</Label>
             <Input
               id="excerpt"
               value={formData.excerpt}
               onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-              placeholder="Brief description (optional)"
+              placeholder="Brief description"
               className="mt-2"
             />
           </div>
 
           {/* Category */}
           <div>
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">Category *</Label>
             <select
               id="category"
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               className="mt-2 w-full px-3 py-2 border rounded-md"
+              required
             >
-              <option value="">Select category</option>
               <option value="Technology">Technology</option>
               <option value="Lifestyle">Lifestyle</option>
               <option value="Business">Business</option>
@@ -226,7 +265,7 @@ export default function NewArticlePage() {
             />
           </div>
 
-          {/* Featured Checkbox - NEW */}
+          {/* Featured Checkbox */}
           <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
             <input
               type="checkbox"
