@@ -128,21 +128,21 @@ export default async function Home() {
               <div className="flex justify-center mb-4">
                 <BookOpen className="text-purple-600" size={48} />
               </div>
-              <h3 className="text-4xl font-bold mb-2">500+</h3>
+              <h3 className="text-4xl font-bold mb-2">50+</h3>
               <p className="text-slate-600">Published Articles</p>
             </div>
             <div className="p-6">
               <div className="flex justify-center mb-4">
                 <Users className="text-blue-600" size={48} />
               </div>
-              <h3 className="text-4xl font-bold mb-2">50K+</h3>
+              <h3 className="text-4xl font-bold mb-2">5K+</h3>
               <p className="text-slate-600">Active Readers</p>
             </div>
             <div className="p-6">
               <div className="flex justify-center mb-4">
                 <TrendingUp className="text-pink-600" size={48} />
               </div>
-              <h3 className="text-4xl font-bold mb-2">1M+</h3>
+              <h3 className="text-4xl font-bold mb-2">10k+</h3>
               <p className="text-slate-600">Monthly Views</p>
             </div>
           </div>
