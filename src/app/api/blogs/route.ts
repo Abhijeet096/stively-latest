@@ -42,111 +42,65 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     
-    // Diagnostic logging
-    console.log("/api/blogs POST - session status:", {
-      hasUser: !!session?.user,
-      role: (session?.user as any)?.role,
-      id: (session?.user as any)?.id,
-      name: session?.user?.name,
-    });
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Unauthorized: no session" },
-        { status: 401 }
-      );
-    }
-    if ((session.user as any).role !== "admin") {
-      return NextResponse.json(
-        { error: "Unauthorized: requires admin role" },
-        { status: 403 }
-      );
+    if (!session?.user || (session.user as any).role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
     const {
       title,
-      description,
+      slug,
       content,
+      excerpt,
       coverImage,
       category,
       tags,
       status,
-      seo,
+      featured = false, // NEW: Default to false
     } = body;
-
-    // Validation
-    if (!title || !description || !content || !coverImage) {
-      return NextResponse.json(
-        { error: "Missing required fields", received: { title: !!title, description: !!description, content: !!content, coverImage: !!coverImage } },
-        { status: 400 }
-      );
-    }
-
-    if (typeof coverImage !== "string") {
-      return NextResponse.json(
-        { error: "Invalid coverImage type", type: typeof coverImage },
-        { status: 400 }
-      );
-    }
 
     const db = await getDatabase();
 
-    // Generate slug
-    const baseSlug = slugify(title, { lower: true, strict: true });
-    let slug = baseSlug;
-    let counter = 1;
-
-    // Ensure slug is unique
-    while (await db.collection("blogs").findOne({ slug })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
+    // Check if slug already exists
+    const existingBlog = await db.collection("blogs").findOne({ slug });
+    if (existingBlog) {
+      return NextResponse.json(
+        { error: 'A blog with this slug already exists' },
+        { status: 400 }
+      );
     }
 
-    // Create blog document
-    const blog = {
+    const newBlog = {
       title,
       slug,
-      description,
       content,
-      coverImage,
-      category,
+      excerpt: excerpt || content.substring(0, 200),
+      coverImage: coverImage || '',
+      category: category || 'Uncategorized',
       tags: tags || [],
-      status: status || "draft",
+      status: status || 'draft',
+      featured: Boolean(featured), // NEW: Save featured status
       author: {
         id: (session.user as any).id,
-        name: session.user.name || "Admin",
-      },
-      seo: {
-        metaTitle: seo?.metaTitle || title,
-        metaDescription: seo?.metaDescription || description,
-        keywords: seo?.keywords || [],
+        name: session.user.name,
+        email: session.user.email,
       },
       views: 0,
       likes: 0,
-      likedBy: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-      publishedAt: status === "published" ? new Date() : null,
     };
 
-    const result = await db.collection("blogs").insertOne(blog);
-    console.log("/api/blogs POST - insertedId:", result.insertedId?.toString());
+    const result = await db.collection("blogs").insertOne(newBlog);
 
+    return NextResponse.json({
+      success: true,
+      blogId: result.insertedId,
+    });
+  } catch (error) {
+    console.error('Error creating blog:', error);
     return NextResponse.json(
-      {
-        message: "Blog created successfully",
-        blogId: result.insertedId,
-        slug,
-      },
-      { status: 201 }
-    );
-  } catch (error: any) {
-    console.error("Error creating blog:", error);
-    const message = error?.message || "Failed to create blog";
-    const stack = error?.stack;
-    return NextResponse.json(
-      { error: message, stack },
+      { error: 'Failed to create blog' },
       { status: 500 }
     );
   }

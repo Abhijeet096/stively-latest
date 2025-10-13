@@ -1,39 +1,31 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import TiptapEditor from "@/components/editor/TiptapEditor";
-import toast from "react-hot-toast";
-
-const CATEGORIES = ["Technology", "Lifestyle", "Business", "Travel", "Health", "Food"];
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import TiptapEditor from '@/components/editor/TiptapEditor';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'react-hot-toast';
+import { Upload, Save, Eye } from 'lucide-react';
 
 export default function NewArticlePage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [coverImage, setCoverImage] = useState<File | null>(null);
-  const [coverImagePreview, setCoverImagePreview] = useState<string>("");
-  
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    content: "",
-    category: "Technology",
-    tags: [] as string[],
-    seo: {
-      metaTitle: "",
-      metaDescription: "",
-      keywords: [] as string[],
-    },
+    title: '',
+    slug: '',
+    excerpt: '',
+    category: '',
+    tags: '',
+    status: 'draft',
+    featured: false, // NEW FIELD
   });
+  const [content, setContent] = useState('');
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState('');
 
-  const [tagInput, setTagInput] = useState("");
-  const [keywordInput, setKeywordInput] = useState("");
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setCoverImage(file);
@@ -45,333 +37,244 @@ export default function NewArticlePage() {
     }
   };
 
-  const addTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, tagInput.trim()],
-      });
-      setTagInput("");
-    }
+  const generateSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   };
 
-  const removeTag = (tag: string) => {
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const title = e.target.value;
     setFormData({
       ...formData,
-      tags: formData.tags.filter((t) => t !== tag),
+      title,
+      slug: generateSlug(title),
     });
   };
 
-  const addKeyword = () => {
-    if (keywordInput.trim() && !formData.seo.keywords.includes(keywordInput.trim())) {
-      setFormData({
-        ...formData,
-        seo: {
-          ...formData.seo,
-          keywords: [...formData.seo.keywords, keywordInput.trim()],
-        },
-      });
-      setKeywordInput("");
-    }
-  };
-
-  const removeKeyword = (keyword: string) => {
-    setFormData({
-      ...formData,
-      seo: {
-        ...formData.seo,
-        keywords: formData.seo.keywords.filter((k) => k !== keyword),
-      },
-    });
-  };
-
-  const handleSubmit = async (status: "draft" | "published") => {
-    // Validation
-    if (!formData.title.trim()) {
-      toast.error("Title is required");
-      return;
-    }
-    if (!formData.description.trim()) {
-      toast.error("Description is required");
-      return;
-    }
-    if (!formData.content.trim()) {
-      toast.error("Content is required");
-      return;
-    }
-    if (!coverImage) {
-      toast.error("Cover image is required");
+  const handleSubmit = async (status: 'draft' | 'published') => {
+    if (!formData.title || !content) {
+      toast.error('Title and content are required');
       return;
     }
 
-    setIsLoading(true);
+    setLoading(true);
 
     try {
-      // Upload cover image first
-      const imageFormData = new FormData();
-      imageFormData.append("file", coverImage);
+      // Upload cover image if exists
+      let coverImageUrl = '';
+      if (coverImage) {
+        const imageFormData = new FormData();
+        imageFormData.append('file', coverImage);
+        
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: imageFormData,
+        });
 
-      const imageResponse = await fetch("/api/upload", {
-        method: "POST",
-        body: imageFormData,
-      });
-
-      if (!imageResponse.ok) {
-        throw new Error("Failed to upload image");
+        if (!uploadRes.ok) throw new Error('Failed to upload image');
+        
+        const uploadData = await uploadRes.json();
+        coverImageUrl = uploadData.url;
       }
 
-      const { url: coverImageUrl } = await imageResponse.json();
-
       // Create article
-      const response = await fetch("/api/blogs", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+      const response = await fetch('/api/blogs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          content,
           coverImage: coverImageUrl,
           status,
+          featured: formData.featured, // Include featured field
+          tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
         }),
       });
 
-      if (!response.ok) {
-        const errText = await response.text();
-        // Try to parse JSON error if present
-        let errMsg = "Failed to create article";
-        try {
-          const errJson = JSON.parse(errText);
-          errMsg = errJson.error || errMsg;
-        } catch {}
-        throw new Error(errMsg);
-      }
+      if (!response.ok) throw new Error('Failed to create article');
 
+      const data = await response.json();
+      
       toast.success(
-        status === "published"
-          ? "Article published successfully!"
-          : "Article saved as draft!"
+        status === 'published' 
+          ? `Article published${formData.featured ? ' as Featured' : ''}!` 
+          : 'Draft saved!'
       );
-      router.push("/admin/articles");
-    } catch (error: any) {
-      console.error("Error creating article:", error);
-      toast.error(error?.message || "Failed to create article");
+      
+      router.push('/admin');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to save article');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Create New Article</h1>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => handleSubmit("draft")}
-            disabled={isLoading}
-          >
-            Save Draft
-          </Button>
-          <Button
-            onClick={() => handleSubmit("published")}
-            disabled={isLoading}
-            className="bg-gradient-to-r from-purple-600 to-blue-600"
-          >
-            {isLoading ? "Publishing..." : "Publish Article"}
-          </Button>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Create New Article</h1>
+          <p className="text-gray-600">Write and publish your article</p>
         </div>
-      </div>
 
-      {/* Basic Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
+          {/* Cover Image */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              Article Title *
-            </label>
+            <Label>Cover Image</Label>
+            <div className="mt-2">
+              {coverImagePreview ? (
+                <div className="relative">
+                  <img
+                    src={coverImagePreview}
+                    alt="Cover preview"
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => {
+                      setCoverImage(null);
+                      setCoverImagePreview('');
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
+                  <Upload className="w-12 h-12 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-500">Click to upload cover image</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Title */}
+          <div>
+            <Label htmlFor="title">Title *</Label>
             <Input
-              placeholder="Enter article title..."
+              id="title"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={handleTitleChange}
+              placeholder="Enter article title"
+              className="mt-2"
             />
           </div>
 
+          {/* Slug */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              Short Description *
-            </label>
-            <textarea
-              className="w-full min-h-[100px] px-3 py-2 border rounded-md"
-              placeholder="Brief description of your article..."
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
+            <Label htmlFor="slug">Slug</Label>
+            <Input
+              id="slug"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              placeholder="article-url-slug"
+              className="mt-2"
             />
           </div>
 
+          {/* Excerpt */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              Category *
-            </label>
+            <Label htmlFor="excerpt">Excerpt</Label>
+            <Input
+              id="excerpt"
+              value={formData.excerpt}
+              onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+              placeholder="Brief description (optional)"
+              className="mt-2"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <Label htmlFor="category">Category</Label>
             <select
-              className="w-full px-3 py-2 border rounded-md"
+              id="category"
               value={formData.category}
-              onChange={(e) =>
-                setFormData({ ...formData, category: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="mt-2 w-full px-3 py-2 border rounded-md"
             >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
+              <option value="">Select category</option>
+              <option value="Technology">Technology</option>
+              <option value="Lifestyle">Lifestyle</option>
+              <option value="Business">Business</option>
+              <option value="Health">Health</option>
+              <option value="Travel">Travel</option>
             </select>
           </div>
 
+          {/* Tags */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Tags</label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="Add a tag..."
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
-              />
-              <Button type="button" onClick={addTag}>
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => removeTag(tag)}
-                >
-                  {tag} ×
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Cover Image *
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="mb-2"
-            />
-            {coverImagePreview && (
-              <img
-                src={coverImagePreview}
-                alt="Preview"
-                className="w-full max-w-md h-48 object-cover rounded-lg"
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Content Editor */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Article Content *</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <TiptapEditor
-            content={formData.content}
-            onChange={(html) => setFormData({ ...formData, content: html })}
-          />
-        </CardContent>
-      </Card>
-
-      {/* SEO Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>SEO Settings</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Meta Title
-            </label>
+            <Label htmlFor="tags">Tags (comma separated)</Label>
             <Input
-              placeholder="SEO title for search engines..."
-              value={formData.seo.metaTitle}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  seo: { ...formData.seo, metaTitle: e.target.value },
-                })
-              }
+              id="tags"
+              value={formData.tags}
+              onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+              placeholder="react, javascript, tutorial"
+              className="mt-2"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.seo.metaTitle.length}/60 characters
-            </p>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block">
-              Meta Description
-            </label>
-            <textarea
-              className="w-full min-h-[80px] px-3 py-2 border rounded-md"
-              placeholder="SEO description for search engines..."
-              value={formData.seo.metaDescription}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  seo: { ...formData.seo, metaDescription: e.target.value },
-                })
-              }
+          {/* Featured Checkbox - NEW */}
+          <div className="flex items-center gap-3 p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <input
+              type="checkbox"
+              id="featured"
+              checked={formData.featured}
+              onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+              className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.seo.metaDescription.length}/160 characters
-            </p>
+            <div>
+              <Label htmlFor="featured" className="text-base font-semibold cursor-pointer">
+                ⭐ Mark as Featured Article
+              </Label>
+              <p className="text-sm text-gray-600">
+                Featured articles appear in the Featured section on the homepage
+              </p>
+            </div>
           </div>
 
+          {/* Content Editor */}
           <div>
-            <label className="text-sm font-medium mb-2 block">
-              Focus Keywords
-            </label>
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="Add a keyword..."
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), addKeyword())
-                }
-              />
-              <Button type="button" onClick={addKeyword}>
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.seo.keywords.map((keyword) => (
-                <Badge
-                  key={keyword}
-                  variant="secondary"
-                  className="cursor-pointer"
-                  onClick={() => removeKeyword(keyword)}
-                >
-                  {keyword} ×
-                </Badge>
-              ))}
+            <Label>Content *</Label>
+            <div className="mt-2">
+              <TiptapEditor content={content} onChange={setContent} />
             </div>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Action Buttons */}
+          <div className="flex gap-4 pt-6 border-t">
+            <Button
+              onClick={() => handleSubmit('draft')}
+              disabled={loading}
+              variant="outline"
+              className="flex-1"
+            >
+              <Save className="mr-2" size={20} />
+              Save as Draft
+            </Button>
+            <Button
+              onClick={() => handleSubmit('published')}
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            >
+              <Eye className="mr-2" size={20} />
+              {formData.featured ? 'Publish as Featured' : 'Publish Article'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

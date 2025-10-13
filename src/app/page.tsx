@@ -14,9 +14,13 @@ async function getFeaturedArticles() {
     const client = await clientPromise;
     const db = client.db('blog-platform');
     
+    // ONLY get articles where featured = true
     const articles = await db
       .collection('blogs')
-      .find({ status: 'published' })
+      .find({ 
+        status: 'published',
+        featured: true  // NEW: Only featured articles
+      })
       .sort({ createdAt: -1 })
       .limit(3)
       .toArray();
@@ -32,7 +36,7 @@ async function getFeaturedArticles() {
       readTime: article.readTime || '5 min read',
     }));
   } catch (error) {
-    console.error('Error fetching articles:', error);
+    console.error('Error fetching featured articles:', error);
     return [];
   }
 }

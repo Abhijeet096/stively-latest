@@ -17,6 +17,7 @@ interface Blog {
   likes: number;
   category: string;
   createdAt: string;
+  featured?: boolean;
 }
 
 export default function AdminArticlesPage() {
@@ -132,6 +133,11 @@ export default function AdminArticlesPage() {
                         {blog.status}
                       </Badge>
                       <Badge variant="outline">{blog.category}</Badge>
+                      {blog.featured && (
+                        <Badge className="bg-yellow-500 text-white">
+                          ⭐ Featured
+                        </Badge>
+                      )}
                     </div>
                     <CardTitle className="text-xl mb-2">{blog.title}</CardTitle>
                     <p className="text-sm text-muted-foreground">

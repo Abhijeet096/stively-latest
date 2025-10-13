@@ -41,3 +41,13 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+
+# Environment files
+.env
+.env.local
+.env*.local
+
+# Scripts with sensitive data
+add-featured-field.js
+seed-articles-complete.js
