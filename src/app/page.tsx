@@ -14,27 +14,34 @@ async function getFeaturedArticles() {
     const client = await clientPromise;
     const db = client.db('blog-platform');
     
-    // ONLY get articles where featured = true
     const articles = await db
       .collection('blogs')
       .find({ 
         status: 'published',
-        featured: true  // NEW: Only featured articles
+        featured: true
       })
       .sort({ createdAt: -1 })
       .limit(3)
       .toArray();
 
-    return articles.map(article => ({
-      id: article._id.toString(),
-      title: article.title,
-      excerpt: article.excerpt || article.content.substring(0, 150) + '...',
-      slug: article.slug,
-      category: article.category || 'Technology',
-      coverImage: article.coverImage,
-      createdAt: article.createdAt,
-      readTime: article.readTime || '5 min read',
-    }));
+    return articles.map(article => {
+      // Strip HTML tags from content for excerpt
+      const plainText = article.content.replace(/<[^>]*>/g, '');
+      const excerpt = article.excerpt 
+        ? article.excerpt.replace(/<[^>]*>/g, '')
+        : plainText.substring(0, 150) + '...';
+
+      return {
+        id: article._id.toString(),
+        title: article.title,
+        excerpt: excerpt,
+        slug: article.slug,
+        category: article.category || 'Technology',
+        coverImage: article.coverImage || '',
+        createdAt: article.createdAt,
+        readTime: article.readTime || '5 min read',
+      };
+    });
   } catch (error) {
     console.error('Error fetching featured articles:', error);
     return [];
@@ -53,18 +60,26 @@ async function getLatestArticles() {
       .limit(6)
       .toArray();
 
-    return articles.map(article => ({
-      id: article._id.toString(),
-      title: article.title,
-      excerpt: article.excerpt || article.content.substring(0, 150) + '...',
-      slug: article.slug,
-      category: article.category || 'Technology',
-      coverImage: article.coverImage,
-      createdAt: article.createdAt,
-      readTime: article.readTime || '5 min read',
-    }));
+    return articles.map(article => {
+      // Strip HTML tags from content for excerpt
+      const plainText = article.content.replace(/<[^>]*>/g, '');
+      const excerpt = article.excerpt 
+        ? article.excerpt.replace(/<[^>]*>/g, '')
+        : plainText.substring(0, 150) + '...';
+
+      return {
+        id: article._id.toString(),
+        title: article.title,
+        excerpt: excerpt,
+        slug: article.slug,
+        category: article.category || 'Technology',
+        coverImage: article.coverImage || '',
+        createdAt: article.createdAt,
+        readTime: article.readTime || '5 min read',
+      };
+    });
   } catch (error) {
-    console.error('Error fetching articles:', error);
+    console.error('Error fetching latest articles:', error);
     return [];
   }
 }
@@ -326,16 +341,25 @@ export default async function Home() {
               {latestArticles.map((article) => (
                 <Link href={`/blog/${article.slug}`} key={article.id}>
                   <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-2 duration-300 border">
-                    <div className="h-48 bg-gradient-to-br from-purple-400 to-blue-400 relative">
-                      {article.coverImage && (
-                        <Image
+                    {/* Cover Image - FIXED */}
+                    <div className="h-48 relative overflow-hidden">
+                      {article.coverImage ? (
+                        <img
                           src={article.coverImage}
                           alt={article.title}
-                          fill
-                          className="object-cover"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // Fallback to gradient if image fails to load
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.parentElement!.classList.add('bg-gradient-to-br', 'from-purple-400', 'to-blue-400');
+                          }}
                         />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-purple-400 to-blue-400" />
                       )}
                     </div>
+
+                    {/* Content */}
                     <div className="p-6">
                       <Badge className="mb-3 bg-purple-100 text-purple-700">
                         {article.category}
@@ -343,8 +367,9 @@ export default async function Home() {
                       <h3 className="text-xl font-bold mb-2 line-clamp-2">
                         {article.title}
                       </h3>
+                      {/* Excerpt - FIXED: Strip HTML tags */}
                       <p className="text-slate-600 mb-4 line-clamp-3">
-                        {article.excerpt}
+                        {article.excerpt.replace(/<[^>]*>/g, '')}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-slate-500">
                         <span>{article.readTime}</span>
