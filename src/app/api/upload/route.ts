@@ -21,32 +21,19 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
 
     try {
-      // TEMPORARILY DISABLED S3 FOR TESTING
-      throw new Error("S3 disabled for testing - using local storage");
-      
       // Try S3 upload first
+      console.log('🔧 Attempting S3 upload...');
       const url = await uploadToS3(buffer, file.name, file.type);
+      console.log('✅ S3 upload successful:', url);
       return NextResponse.json({ url });
     } catch (s3Error: any) {
-      console.log("S3 upload failed, falling back to local storage:", s3Error.message);
+      console.error("❌ S3 upload failed:", s3Error);
       
-      // Fallback to local storage
-      const fileName = `${Date.now()}-${file.name}`;
-      const uploadDir = join(process.cwd(), 'public', 'uploads');
-      
-      // Ensure upload directory exists
-      try {
-        await mkdir(uploadDir, { recursive: true });
-      } catch (dirError) {
-        // Directory might already exist
-      }
-      
-      const filePath = join(uploadDir, fileName);
-      await writeFile(filePath, buffer);
-      
-      // Return local URL
-      const url = `/uploads/${fileName}`;
-      return NextResponse.json({ url });
+      // Return error - local storage doesn't work on Vercel
+      return NextResponse.json(
+        { error: `S3 upload failed: ${s3Error.message}. Please check your AWS configuration.` },
+        { status: 500 }
+      );
     }
   } catch (error: any) {
     console.error("Upload error:", error);

@@ -18,16 +18,19 @@ export async function uploadToS3(
     region: process.env.AWS_REGION,
     hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
     hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
-    fileName
+    accessKeyPrefix: process.env.AWS_ACCESS_KEY_ID?.substring(0, 8) + '...',
+    fileName,
+    fileSize: file.length
   });
 
-  const key = `blog-images/${Date.now()}-${fileName}`;
+  const key = `blog-images/${Date.now()}-${fileName.replace(/\s+/g, '-')}`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.AWS_S3_BUCKET!,
     Key: key,
     Body: file,
     ContentType: contentType,
+    ACL: 'public-read', // Make sure file is publicly readable
   });
 
   try {
