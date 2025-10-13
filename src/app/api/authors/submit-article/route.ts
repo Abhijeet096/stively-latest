@@ -1,25 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { authOptions } from '@/lib/auth';
 import clientPromise from '@/lib/db/mongodb';
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || ((session.user as any).role !== 'author' && (session.user as any).role !== 'admin')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db('blog-platform');
+    const submissions = db.collection('article_submissions');
+
+    const userSubmissions = await submissions
+      .find({ authorEmail: session.user.email })
+      .sort({ submittedAt: -1 })
+      .toArray();
+
+    // Convert ObjectId to string
+    const formattedSubmissions = userSubmissions.map(submission => ({
+      ...submission,
+      _id: submission._id.toString()
+    }));
+
+    return NextResponse.json({
+      submissions: formattedSubmissions
+    });
+
+  } catch (error) {
+    console.error('Error fetching submissions:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch submissions' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user as any).role !== 'author') {
+    if (!session?.user || ((session.user as any).role !== 'author' && (session.user as any).role !== 'admin')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
     const {
       title,
-      slug,
       content,
       excerpt,
-      coverImage,
       category,
       tags,
+      authorName,
+      authorEmail,
     } = body;
 
     // Validation
@@ -30,64 +66,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Generate slug from title
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
     const client = await clientPromise;
     const db = client.db('blog-platform');
-    const blogs = db.collection('blogs');
     const submissions = db.collection('article_submissions');
 
-    // Check if slug already exists
-    const existingBlog = await blogs.findOne({ slug });
-    if (existingBlog) {
-      return NextResponse.json(
-        { error: 'An article with this slug already exists' },
-        { status: 400 }
-      );
-    }
-
-    // Create article with pending status
-    const newBlog = {
+    // Create submission record
+    const newSubmission = {
       title,
       slug,
       content,
-      excerpt: excerpt || content.replace(/<[^>]*>/g, '').substring(0, 200),
-      coverImage: coverImage || '',
+      excerpt: excerpt || content.substring(0, 200),
       category,
       tags: tags || [],
-      status: 'pending_review', // Special status for author submissions
-      featured: false,
-      author: {
-        id: (session.user as any).id,
-        name: session.user.name,
-        email: session.user.email,
-        role: 'author',
-      },
-      views: 0,
-      likes: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      submittedForReview: true,
-      reviewStatus: 'pending',
+      status: 'pending',
+      authorName: authorName || session.user.name,
+      authorEmail: authorEmail || session.user.email,
+      authorId: (session.user as any).id,
+      submittedAt: new Date(),
+      feedback: null,
     };
 
-    const result = await blogs.insertOne(newBlog);
-
-    // Create submission record
-    await submissions.insertOne({
-      articleId: result.insertedId.toString(),
-      authorId: (session.user as any).id,
-      authorName: session.user.name,
-      authorEmail: session.user.email,
-      title,
-      status: 'pending',
-      submittedAt: new Date(),
-      reviewedAt: null,
-      reviewedBy: null,
-      reviewNotes: null,
-    });
+    const result = await submissions.insertOne(newSubmission);
 
     return NextResponse.json({
       success: true,
-      articleId: result.insertedId,
+      submissionId: result.insertedId,
       message: 'Article submitted for review successfully',
     });
   } catch (error) {

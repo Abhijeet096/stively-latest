@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getDatabase } from "@/lib/db/mongodb";
+import clientPromise from "@/lib/db/mongodb";
 
 export async function GET() {
   try {
@@ -11,7 +11,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     
-    const db = await getDatabase();
+    const client = await clientPromise;
+    const db = client.db("blog-platform");
     const blogsCollection = db.collection("blogs");
     const applicationsCollection = db.collection("author_applications");
     const submissionsCollection = db.collection("article_submissions");
