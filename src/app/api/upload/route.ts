@@ -21,6 +21,9 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
 
     try {
+      // TEMPORARILY DISABLED S3 FOR TESTING
+      throw new Error("S3 disabled for testing - using local storage");
+      
       // Try S3 upload first
       const url = await uploadToS3(buffer, file.name, file.type);
       return NextResponse.json({ url });
