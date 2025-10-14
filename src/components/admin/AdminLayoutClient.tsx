@@ -13,6 +13,7 @@ import {
   BarChart3,
   Users,
   CheckSquare,
+  Upload,
 } from 'lucide-react';
 
 export default function AdminLayoutClient({
@@ -70,6 +71,11 @@ export default function AdminLayoutClient({
       name: 'All Articles',
       href: '/admin/articles',
       icon: FileText,
+    },
+    {
+      name: 'Import Document',
+      href: '/admin/import',
+      icon: Upload,
     },
     {
       name: 'Manage Authors',
