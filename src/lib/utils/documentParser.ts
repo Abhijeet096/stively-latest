@@ -23,20 +23,32 @@ async function uploadImageToS3(
   imageBuffer: Buffer,
   imageName: string
 ): Promise<string> {
-  const timestamp = Date.now();
-  const filename = `imported-images/${timestamp}-${imageName}`;
+  try {
+    // Check if AWS credentials are configured
+    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY || !process.env.AWS_S3_BUCKET_NAME) {
+      console.warn('⚠️ AWS credentials not configured, skipping image upload');
+      return ''; // Return empty string if AWS not configured
+    }
 
-  const command = new PutObjectCommand({
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: filename,
-    Body: imageBuffer,
-    ContentType: 'image/png',
-  });
+    const timestamp = Date.now();
+    const filename = `imported-images/${timestamp}-${imageName}`;
 
-  await s3Client.send(command);
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME,
+      Key: filename,
+      Body: imageBuffer,
+      ContentType: 'image/png',
+    });
 
-  const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`;
-  return url;
+    await s3Client.send(command);
+
+    const url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${filename}`;
+    console.log('✅ Image uploaded to S3:', url);
+    return url;
+  } catch (error) {
+    console.error('❌ Error uploading image to S3:', error);
+    return ''; // Return empty string on error, don't fail the whole import
+  }
 }
 
 // Parse Word Document (.docx)
@@ -55,10 +67,16 @@ export async function parseWordDocument(
             const imageBuffer = await image.read();
             const imageName = `image-${imageCounter++}.png`;
             const imageUrl = await uploadImageToS3(imageBuffer, imageName);
-            imageMap.set(imageName, imageUrl);
-            return { src: imageUrl };
+            
+            if (imageUrl) {
+              imageMap.set(imageName, imageUrl);
+              return { src: imageUrl };
+            } else {
+              console.warn('⚠️ Image upload failed or AWS not configured, skipping image');
+              return { src: '' }; // Skip image if upload fails
+            }
           } catch (error) {
-            console.error('Error uploading image:', error);
+            console.error('❌ Error processing image:', error);
             return { src: '' };
           }
         }),

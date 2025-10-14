@@ -61,12 +61,31 @@ export default function ImportDocumentPage() {
         body: uploadFormData,
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers.get('content-type'));
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Import failed');
+        const responseText = await response.text();
+        console.error('Error response:', responseText);
+        
+        try {
+          const error = JSON.parse(responseText);
+          throw new Error(error.error || 'Import failed');
+        } catch {
+          throw new Error(`Server error: ${response.status} - ${responseText}`);
+        }
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('Success response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse JSON:', responseText);
+        throw new Error('Invalid server response');
+      }
       const doc = data.document;
 
       setImported(doc);
