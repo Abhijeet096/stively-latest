@@ -1,5 +1,4 @@
 import mammoth from 'mammoth';
-const pdfParse = require('pdf-parse');
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const s3Client = new S3Client({
@@ -128,48 +127,10 @@ export async function parseWordDocument(
   }
 }
 
-// Parse PDF Document
+// Parse PDF Document - Temporarily disabled due to build issues
 export async function parsePDFDocument(
   buffer: Buffer
 ): Promise<ParsedDocument> {
-  try {
-    const data = await pdfParse(buffer);
-    const text = data.text;
-
-    // Convert plain text to HTML with basic formatting
-    const lines = text.split('\n').filter((line: string) => line.trim());
-    let html = '';
-    let title = '';
-
-    lines.forEach((line: string, index: number) => {
-      const trimmedLine = line.trim();
-      
-      if (index === 0 && trimmedLine.length < 100) {
-        // First line as title
-        title = trimmedLine;
-        html += `<h1>${trimmedLine}</h1>\n`;
-      } else if (trimmedLine.length < 50 && /^[A-Z]/.test(trimmedLine)) {
-        // Short lines starting with capital - likely headings
-        html += `<h2>${trimmedLine}</h2>\n`;
-      } else if (trimmedLine) {
-        // Regular paragraphs
-        html += `<p>${trimmedLine}</p>\n`;
-      }
-    });
-
-    const excerpt = lines
-      .slice(1, 3)
-      .join(' ')
-      .substring(0, 200);
-
-    return {
-      html,
-      images: [],
-      title: title || 'Imported PDF',
-      excerpt,
-    };
-  } catch (error) {
-    console.error('Error parsing PDF:', error);
-    throw new Error('Failed to parse PDF document');
-  }
+  // Temporarily disable PDF parsing due to ESM compatibility issues with pdf-parse
+  throw new Error('PDF parsing is temporarily unavailable. Please upload a Word document (.docx) instead, or convert your PDF to .docx format first.');
 }

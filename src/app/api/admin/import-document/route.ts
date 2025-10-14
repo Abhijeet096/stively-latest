@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
 
     const fileName = file.name.toLowerCase();
     
-    if (!fileName.endsWith('.docx') && !fileName.endsWith('.pdf')) {
+    if (!fileName.endsWith('.docx')) {
       console.error('❌ Unsupported file type:', fileName);
       return NextResponse.json(
-        { error: 'Unsupported file type. Please upload .docx or .pdf files only.' },
+        { error: 'Currently only Word documents (.docx) are supported. PDF support is temporarily unavailable.' },
         { status: 400 }
       );
     }
@@ -92,13 +92,8 @@ export async function POST(req: NextRequest) {
     let result;
 
     try {
-      if (fileName.endsWith('.docx')) {
-        console.log('📄 Parsing Word document...');
-        result = await parseWordDocument(fileBuffer);
-      } else {
-        console.log('📄 Parsing PDF document...');
-        result = await parsePDFDocument(fileBuffer);
-      }
+      console.log('📄 Parsing Word document...');
+      result = await parseWordDocument(fileBuffer);
 
       console.log('✅ Document parsed successfully');
       console.log('📊 Result:', {

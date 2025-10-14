@@ -36,10 +36,10 @@ export default function ImportDocumentPage() {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       const fileName = selectedFile.name.toLowerCase();
-      if (fileName.endsWith('.docx') || fileName.endsWith('.pdf')) {
+      if (fileName.endsWith('.docx')) {
         setFile(selectedFile);
       } else {
-        alert('Please select a .docx or .pdf file');
+        alert('Please select a .docx file. PDF support is temporarily unavailable.');
       }
     }
   };
@@ -186,7 +186,7 @@ export default function ImportDocumentPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Import Document</h1>
           <p className="text-gray-600">
-            Upload Word (.docx) or PDF files to import as blog posts
+            Upload Word (.docx) files to import as blog posts
           </p>
         </div>
 
@@ -211,13 +211,13 @@ export default function ImportDocumentPage() {
                       drag and drop
                     </p>
                     <p className="text-xs text-gray-500">
-                      Word (.docx) or PDF files
+                      Word (.docx) files
                     </p>
                   </div>
                   <input
                     type="file"
                     className="hidden"
-                    accept=".docx,.pdf"
+                    accept=".docx"
                     onChange={handleFileChange}
                   />
                 </label>
