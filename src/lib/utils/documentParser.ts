@@ -1,6 +1,5 @@
 import mammoth from 'mammoth';
-// @ts-ignore
-import pdfParse from 'pdf-parse';
+const pdfParse = require('pdf-parse');
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const s3Client = new S3Client({

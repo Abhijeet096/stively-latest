@@ -53,12 +53,18 @@ export default function ImportDocumentPage() {
     setLoading(true);
 
     try {
+      console.log('🔵 Starting file upload...');
+      console.log('File:', file.name, file.size, file.type);
+      
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
+      
+      console.log('🔵 FormData created, sending request...');
 
       const response = await fetch('/api/admin/import-document', {
         method: 'POST',
         body: uploadFormData,
+        // Don't set Content-Type header, let the browser set it with boundary
       });
 
       console.log('Response status:', response.status);
