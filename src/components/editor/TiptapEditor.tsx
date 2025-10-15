@@ -8,6 +8,10 @@ import { TextStyle } from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
@@ -44,9 +48,15 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         multicolor: true,
       }),
       TextAlign.configure({
-        types: ['heading', 'paragraph'],
-        alignments: ['left', 'center', 'right'],
+        types: ['heading', 'paragraph', 'div'],
+        alignments: ['left', 'center', 'right', 'justify'],
       }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content,
     onUpdate: ({ editor }) => {
@@ -264,6 +274,15 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
           >
             ➡️
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={editor.isActive({ textAlign: 'justify' }) ? "default" : "outline"}
+            onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+            title="Justify"
+          >
+            ↕️
+          </Button>
         </div>
 
         {/* Image Upload */}
@@ -280,7 +299,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
         </div>
 
         {/* Image Size Controls */}
-        <div className="flex gap-1">
+        <div className="flex gap-1 border-r pr-2">
           <Button
             type="button"
             size="sm"
@@ -316,6 +335,89 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
             title="Full Width (100%)"
           >
             Full
+          </Button>
+        </div>
+
+        {/* Table Controls */}
+        <div className="flex gap-1 border-r pr-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+            title="Insert Table (3x3)"
+          >
+            📊 Table
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().addColumnBefore().run()}
+            disabled={!editor.can().addColumnBefore()}
+            title="Add Column Before"
+          >
+            ⬅️+
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().addColumnAfter().run()}
+            disabled={!editor.can().addColumnAfter()}
+            title="Add Column After"
+          >
+            +➡️
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().deleteColumn().run()}
+            disabled={!editor.can().deleteColumn()}
+            title="Delete Column"
+          >
+            ❌📊
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().addRowBefore().run()}
+            disabled={!editor.can().addRowBefore()}
+            title="Add Row Before"
+          >
+            ⬆️+
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().addRowAfter().run()}
+            disabled={!editor.can().addRowAfter()}
+            title="Add Row After"
+          >
+            +⬇️
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().deleteRow().run()}
+            disabled={!editor.can().deleteRow()}
+            title="Delete Row"
+          >
+            ❌📋
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => editor.chain().focus().deleteTable().run()}
+            disabled={!editor.can().deleteTable()}
+            title="Delete Table"
+          >
+            🗑️📊
           </Button>
         </div>
 

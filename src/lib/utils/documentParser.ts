@@ -49,6 +49,35 @@ async function uploadImageToS3(
   }
 }
 
+// Post-process HTML to improve formatting and table support
+function postProcessWordHtml(html: string): string {
+  // Convert text alignment classes to TiptapEditor-compatible format
+  html = html.replace(/class="text-center"/g, 'style="text-align: center"');
+  html = html.replace(/class="text-right"/g, 'style="text-align: right"');
+  html = html.replace(/class="text-justify"/g, 'style="text-align: justify"');
+  html = html.replace(/class="text-left"/g, 'style="text-align: left"');
+
+  // Improve table formatting - add basic styling for better display
+  html = html.replace(/<table[^>]*>/g, '<table style="border-collapse: collapse; width: 100%; margin: 1em 0;">');
+  html = html.replace(/<td[^>]*>/g, '<td style="border: 1px solid #ddd; padding: 8px;">');
+  html = html.replace(/<th[^>]*>/g, '<th style="border: 1px solid #ddd; padding: 8px; background-color: #f5f5f5; font-weight: bold;">');
+
+  // Preserve line breaks and spacing
+  html = html.replace(/\r?\n/g, ' ');
+  html = html.replace(/\s+/g, ' ');
+
+  // Fix nested formatting issues
+  html = html.replace(/<p>\s*<\/p>/g, '<br>'); // Replace empty paragraphs with breaks
+  
+  // Ensure images have proper styling
+  html = html.replace(/<img([^>]*)>/g, '<img$1 style="max-width: 100%; height: auto; display: block; margin: 1em 0;">');
+
+  // Preserve blockquotes formatting
+  html = html.replace(/<blockquote[^>]*>/g, '<blockquote style="margin: 1em 0; padding: 0 1em; border-left: 4px solid #ddd; font-style: italic;">');
+
+  return html.trim();
+}
+
 // Parse Word Document (.docx)
 export async function parseWordDocument(
   buffer: Buffer
@@ -79,18 +108,54 @@ export async function parseWordDocument(
           }
         }),
         styleMap: [
+          // Headings
           "p[style-name='Heading 1'] => h1:fresh",
           "p[style-name='Heading 2'] => h2:fresh",
           "p[style-name='Heading 3'] => h3:fresh",
+          "p[style-name='Heading 4'] => h4:fresh",
+          "p[style-name='Heading 5'] => h5:fresh",
+          "p[style-name='Heading 6'] => h6:fresh",
           "p[style-name='Title'] => h1:fresh",
+          
+          // Text formatting
           "b => strong",
           "i => em",
           "u => u",
+          "strike => s",
+          
+          // Text alignment - preserve alignment information
+          "p[style-name='Center'] => p.text-center",
+          "p[style-name='Right'] => p.text-right", 
+          "p[style-name='Justify'] => p.text-justify",
+          
+          // Lists
+          "p[style-name='List Paragraph'] => li:fresh",
+          
+          // Tables - preserve table structure
+          "table => table",
+          "tr => tr", 
+          "td => td",
+          "th => th",
+          
+          // Preserve some common Word styles
+          "p[style-name='Quote'] => blockquote > p:fresh",
+          "p[style-name='Intense Quote'] => blockquote > p:fresh",
+          "p[style-name='Caption'] => figcaption:fresh",
+          
+          // Code blocks
+          "p[style-name='Code'] => pre:fresh",
+          "span[style-name='Code'] => code",
         ],
+        
+        // Include table processing
+        includeDefaultStyleMap: true,
       }
     );
 
     let html = result.value;
+
+    // Post-process HTML to improve table and formatting support
+    html = postProcessWordHtml(html);
 
     // Extract title (first h1 or first paragraph)
     const titleMatch = html.match(/<h1[^>]*>(.*?)<\/h1>/i);
