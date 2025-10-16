@@ -42,6 +42,7 @@ export async function PUT(
     const body = await req.json();
     const {
       title,
+      slug: customSlug,
       description,
       content,
       coverImage,
@@ -60,13 +61,34 @@ export async function PUT(
 
     const db = await getDatabase();
 
-    // Generate new slug if title changed
+    // Handle slug generation and validation
     const existingBlog = await db.collection("blogs").findOne({ 
       _id: new ObjectId(params.id) 
     });
 
     let slug = existingBlog?.slug;
-    if (existingBlog && existingBlog.title !== title) {
+
+    // If custom slug is provided, use it (with validation)
+    if (customSlug && customSlug.trim()) {
+      const cleanSlug = slugify(customSlug.trim(), { lower: true, strict: true });
+      
+      // Check if this slug is unique (excluding current blog)
+      const slugExists = await db.collection("blogs").findOne({ 
+        slug: cleanSlug, 
+        _id: { $ne: new ObjectId(params.id) } 
+      });
+
+      if (slugExists) {
+        return NextResponse.json(
+          { error: `The slug "${cleanSlug}" is already in use. Please choose a different URL slug.` },
+          { status: 400 }
+        );
+      }
+      
+      slug = cleanSlug;
+    }
+    // Only generate new slug if no custom slug provided AND title changed
+    else if (existingBlog && existingBlog.title !== title && !customSlug) {
       const baseSlug = slugify(title, { lower: true, strict: true });
       slug = baseSlug;
       let counter = 1;

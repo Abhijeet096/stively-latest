@@ -19,6 +19,7 @@ export default function EditArticlePage() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
+    slug: "",
     description: "",
     content: "",
     coverImage: "",
@@ -43,6 +44,7 @@ export default function EditArticlePage() {
         const blog = await res.json();
         setFormData({
           title: blog.title,
+          slug: blog.slug || "",
           description: blog.description,
           content: blog.content,
           coverImage: blog.coverImage,
@@ -70,6 +72,11 @@ export default function EditArticlePage() {
   async function handleSubmit(status: "draft" | "published") {
     if (!formData.title || !formData.content) {
       toast.error("Title and content are required");
+      return;
+    }
+
+    if (!formData.slug || !formData.slug.trim()) {
+      toast.error("URL slug is required");
       return;
     }
 
@@ -129,6 +136,18 @@ export default function EditArticlePage() {
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               placeholder="Enter article title"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">URL Slug *</label>
+            <Input
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') })}
+              placeholder="blog-url-slug"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be the URL: /blog/{formData.slug || 'your-slug'}
+            </p>
           </div>
 
           <div>

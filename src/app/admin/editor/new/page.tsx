@@ -45,10 +45,14 @@ export default function NewArticlePage() {
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const title = e.target.value;
+    
+    // Only auto-generate slug if current slug is empty or was auto-generated
+    const shouldAutoGenerate = !formData.slug || formData.slug === generateSlug(formData.title);
+    
     setFormData({
       ...formData,
       title,
-      slug: generateSlug(title),
+      slug: shouldAutoGenerate ? generateSlug(title) : formData.slug,
     });
   };
 
@@ -58,6 +62,11 @@ export default function NewArticlePage() {
     // Validation
     if (!formData.title || !formData.title.trim()) {
       alert('Title is required');
+      return;
+    }
+
+    if (!formData.slug || !formData.slug.trim()) {
+      alert('URL slug is required');
       return;
     }
 
@@ -222,14 +231,20 @@ export default function NewArticlePage() {
 
           {/* Slug */}
           <div>
-            <Label htmlFor="slug">Slug</Label>
+            <Label htmlFor="slug">URL Slug *</Label>
             <Input
               id="slug"
               value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') 
+              })}
               placeholder="article-url-slug"
               className="mt-2"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be the URL: /blog/{formData.slug || 'your-slug'}
+            </p>
           </div>
 
           {/* Excerpt */}
