@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { X, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/utils/dateUtils';
 
 interface Article {
   id: string;
@@ -108,7 +109,7 @@ export default function FeaturedArticleCard({ article }: { article: Article }) {
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <span>{article.readTime}</span>
               <span>•</span>
-              <span>{new Date(article.createdAt).toLocaleDateString()}</span>
+              <span>{formatDate(article.createdAt)}</span>
             </div>
           </div>
         </div>

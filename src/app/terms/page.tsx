@@ -1,4 +1,5 @@
-import Link from 'next/link';
+import Link from "next/link";
+import { formatDateLong } from "@/lib/utils/dateUtils";
 import { Button } from '@/components/ui/button';
 
 export const metadata = {
@@ -25,7 +26,7 @@ export default function TermsPage() {
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
           <h1 className="text-4xl font-bold mb-4">Terms of Service</h1>
-          <p className="text-gray-600 mb-8">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-gray-600 mb-8">Last updated: {formatDateLong(new Date())}</p>
 
           <div className="prose prose-lg max-w-none">
             <h2 className="text-2xl font-bold mt-8 mb-4">1. Acceptance of Terms</h2>
