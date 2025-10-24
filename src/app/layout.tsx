@@ -81,6 +81,23 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} antialiased`}>
         <SessionProvider>
+          {/* Google AdSense Display Ad */}
+          <div className="ad-container" style={{ textAlign: 'center', margin: '20px 0' }}>
+            <ins 
+              className="adsbygoogle"
+              style={{ display: 'block' }}
+              data-ad-client="ca-pub-1688587815359544"
+              data-ad-slot="9303208781"
+              data-ad-format="auto"
+              data-full-width-responsive="true"
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `(adsbygoogle = window.adsbygoogle || []).push({});`
+              }}
+            />
+          </div>
+          
           {children}
         </SessionProvider>
         <Toaster 
