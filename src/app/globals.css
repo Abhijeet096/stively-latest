@@ -35,6 +35,10 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+  }
 }
 
 /* Custom Scrollbar */
