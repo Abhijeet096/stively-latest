@@ -77,7 +77,7 @@ export default function SubmissionsPage() {
       const response = await fetch('/api/admin/submissions/revise', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId, feedback: reason }),
+        body: JSON.stringify({ submissionId, reviewNotes: reason }),
       });
 
       if (response.ok) {
