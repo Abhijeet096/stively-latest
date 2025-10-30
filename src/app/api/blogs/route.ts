@@ -26,7 +26,9 @@ export async function GET(req: Request) {
     // Convert MongoDB _id to string
     const blogsWithStringId = blogs.map(blog => ({
       ...blog,
-      _id: blog._id.toString()
+      _id: blog._id.toString(),
+      excerpt: blog.excerpt || '',
+      coverImage: blog.coverImage || ''
     }));
 
     return NextResponse.json(blogsWithStringId);

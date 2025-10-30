@@ -27,9 +27,9 @@ async function getFeaturedArticles() {
 
     return articles.map(article => {
       // Strip HTML tags from content for excerpt
-      const plainText = article.content.replace(/<[^>]*>/g, '');
+      const plainText = (article.content || '').replace(/<[^>]*>/g, '');
       const excerpt = article.excerpt 
-        ? article.excerpt.replace(/<[^>]*>/g, '')
+        ? (article.excerpt || '').replace(/<[^>]*>/g, '')
         : plainText.substring(0, 150) + '...';
 
       return {
@@ -63,9 +63,9 @@ async function getLatestArticles() {
 
     return articles.map(article => {
       // Strip HTML tags from content for excerpt
-      const plainText = article.content.replace(/<[^>]*>/g, '');
+      const plainText = (article.content || '').replace(/<[^>]*>/g, '');
       const excerpt = article.excerpt 
-        ? article.excerpt.replace(/<[^>]*>/g, '')
+        ? (article.excerpt || '').replace(/<[^>]*>/g, '')
         : plainText.substring(0, 150) + '...';
 
       return {

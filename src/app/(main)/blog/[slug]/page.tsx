@@ -2,10 +2,56 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import clientPromise from "@/lib/db/mongodb";
 import { Metadata } from "next";
 import BlogInteractions from "./BlogInteractions";
 import BlogImage from "./BlogImage";
+
+// Utility function to insert 3 ads strategically into content
+function insertAdsIntoContent(content: string) {
+  if (!content) return content;
+  
+  // Split content into paragraphs
+  const paragraphs = content.split(/(<\/p>|<br\s*\/?>|\n\n)/);
+  let result = '';
+  
+  // Only insert 3 ads at strategic points
+  const totalParagraphs = paragraphs.length;
+  const adPositions = [
+    Math.floor(totalParagraphs * 0.25), // After first quarter
+    Math.floor(totalParagraphs * 0.5),  // In the middle
+    Math.floor(totalParagraphs * 0.75)  // Near the end
+  ];
+  
+  for (let i = 0; i < paragraphs.length; i++) {
+    const paragraph = paragraphs[i];
+    result += paragraph;
+    
+    // Insert ad at strategic positions (only 3 total)
+    if (adPositions.includes(i) && i < paragraphs.length - 1) {
+      const adHtml = `
+        <div class="content-ad-container my-6 flex justify-center">
+          <div class="ad-container bg-gray-50 p-4 rounded-lg border max-w-md">
+            <ins 
+              class="adsbygoogle"
+              style="display: block; width: 300px; height: 250px;"
+              data-ad-client="ca-pub-1688587815359544"
+              data-ad-slot="9303208781"
+              data-ad-format="rectangle"
+            />
+            <script>
+              (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+          </div>
+        </div>
+      `;
+      result += adHtml;
+    }
+  }
+  
+  return result;
+}
 
 interface Blog {
   _id: string;
@@ -50,8 +96,8 @@ async function getBlog(slug: string): Promise<Blog | null> {
       _id: blog._id.toString(),
       title: blog.title,
       slug: blog.slug,
-      content: blog.content,
-      excerpt: blog.excerpt,
+      content: blog.content || '',
+      excerpt: blog.excerpt || '',
       coverImage: blog.coverImage,
       category: blog.category,
       tags: blog.tags || [],
@@ -97,12 +143,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${blog.title} | Stively`,
-    description: blog.excerpt || blog.content.replace(/<[^>]*>/g, "").substring(0, 160),
+    description: blog.excerpt || (blog.content || '').replace(/<[^>]*>/g, "").substring(0, 160),
     keywords: blog.tags.join(", "),
     authors: [{ name: blog.author.name }],
     openGraph: {
       title: blog.title,
-      description: blog.excerpt || blog.content.replace(/<[^>]*>/g, "").substring(0, 160),
+      description: blog.excerpt || (blog.content || '').replace(/<[^>]*>/g, "").substring(0, 160),
       type: "article",
       url: `https://stively.com/blog/${blog.slug}`,
       images: blog.coverImage ? [
@@ -117,7 +163,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: "summary_large_image",
       title: blog.title,
-      description: blog.excerpt || blog.content.replace(/<[^>]*>/g, "").substring(0, 160),
+      description: blog.excerpt || (blog.content || '').replace(/<[^>]*>/g, "").substring(0, 160),
       images: blog.coverImage ? [blog.coverImage] : [],
     },
   };
@@ -129,6 +175,9 @@ export default async function BlogPostPage({ params }: PageProps) {
   if (!blog) {
     notFound();
   }
+
+  // Insert ads into content (currently disabled, enable when ready)
+  const contentWithAds = insertAdsIntoContent(blog.content || '');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -168,34 +217,115 @@ export default async function BlogPostPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Article Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-          <div 
-            className="prose prose-lg max-w-none"
-            dangerouslySetInnerHTML={{ __html: blog.content }}
-          />
-          
-          {/* Tags */}
-          {blog.tags.length > 0 && (
-            <div className="mt-8 pt-6 border-t">
-              <div className="flex flex-wrap gap-2">
-                {blog.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
+      {/* Article Content with Sidebar */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content */}
+          <div className="flex-1">
+            <div className="bg-white rounded-xl shadow-sm p-8 mb-8 min-h-[400px]">
+              <div 
+                className="prose prose-lg max-w-none overflow-x-auto overflow-y-visible"
+                dangerouslySetInnerHTML={{ __html: contentWithAds }}
+              />
+              
+              {/* Middle Content Ad - Keep this for now */}
+              <div className="my-8 flex justify-center">
+                <div className="ad-container bg-gray-50 p-4 rounded-lg border">
+                  <ins 
+                    className="adsbygoogle"
+                    style={{ display: 'block', minWidth: '300px', minHeight: '250px' }}
+                    data-ad-client="ca-pub-1688587815359544"
+                    data-ad-slot="9303208781"
+                    data-ad-format="rectangle"
+                  />
+                  <script
+                    dangerouslySetInnerHTML={{
+                      __html: `(adsbygoogle = window.adsbygoogle || []).push({});`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Continue with rest of content */}
+              <div className="mt-8">
+                {/* Tags */}
+                {blog.tags.length > 0 && (
+                  <div className="pt-6 border-t">
+                    <div className="flex flex-wrap gap-2">
+                      {blog.tags.map((tag) => (
+                        <Badge key={tag} variant="secondary">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactive Elements */}
+                <BlogInteractions
+                  blogId={blog._id}
+                  slug={blog.slug}
+                  initialLikes={blog.likes}
+                  title={blog.title}
+                />
+              </div>
+
+              {/* End of Content Ad */}
+              <div className="mt-8 flex justify-center">
+                <div className="ad-container bg-gray-50 p-4 rounded-lg border">
+                  <ins 
+                    className="adsbygoogle"
+                    style={{ display: 'block', minWidth: '300px', minHeight: '250px' }}
+                    data-ad-client="ca-pub-1688587815359544"
+                    data-ad-slot="9303208781"
+                    data-ad-format="rectangle"
+                  />
+                  <script
+                    dangerouslySetInnerHTML={{
+                      __html: `(adsbygoogle = window.adsbygoogle || []).push({});`
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Interactive Elements */}
-          <BlogInteractions
-            blogId={blog._id}
-            slug={blog.slug}
-            initialLikes={blog.likes}
-            title={blog.title}
-          />
+          {/* Sidebar */}
+          <div className="lg:w-80">
+            <div className="sticky top-8">
+              {/* Sidebar Ad */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4 text-center">Advertisement</h3>
+                <div className="ad-container">
+                  <ins 
+                    className="adsbygoogle"
+                    style={{ display: 'block', width: '300px', height: '600px' }}
+                    data-ad-client="ca-pub-1688587815359544"
+                    data-ad-slot="9303208781"
+                    data-ad-format="vertical"
+                  />
+                  <script
+                    dangerouslySetInnerHTML={{
+                      __html: `(adsbygoogle = window.adsbygoogle || []).push({});`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Related Articles or Additional Content */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Keep Reading</h3>
+                <p className="text-gray-600 text-sm">
+                  Check out more articles in our blog section.
+                </p>
+                <Link href="/blog">
+                  <Button className="w-full mt-4" variant="outline">
+                    Browse Articles
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

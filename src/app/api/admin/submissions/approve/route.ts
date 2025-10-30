@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
     const newBlog = {
       title: submission.title,
       slug: submission.slug,
-      content: submission.content,
-      excerpt: submission.excerpt || submission.content.replace(/<[^>]*>/g, '').substring(0, 200),
+      content: submission.content || '',
+      excerpt: submission.excerpt || submission.content?.replace(/<[^>]*>/g, '').substring(0, 200) || '',
       coverImage: submission.coverImage || '',
       category: submission.category,
       tags: submission.tags || [],

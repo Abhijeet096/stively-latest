@@ -433,7 +433,7 @@ export default function TiptapEditor({ content, onChange }: TiptapEditorProps) {
       </div>
 
       {/* Editor Content */}
-      <EditorContent editor={editor} className="min-h-[400px]" />
+      <EditorContent editor={editor} className="min-h-[400px] max-h-[800px] overflow-y-auto overflow-x-auto" />
 
       {/* Help Text */}
       <div className="border-t p-2 text-xs text-gray-500 bg-gray-50">

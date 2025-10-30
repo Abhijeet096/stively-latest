@@ -12,7 +12,7 @@ interface Blog {
   _id: string;
   title: string;
   slug: string;
-  description: string;
+  excerpt: string;
   coverImage: string;
   category: string;
   views: number;
@@ -127,7 +127,7 @@ export default function BlogListingPage() {
               <Link key={blog._id} href={`/blog/${blog.slug}`}>
                 <Card className="premium-card overflow-hidden group cursor-pointer h-full">
                   <img
-                    src={blog.coverImage}
+                    src={blog.coverImage || '/placeholder-image.jpg'}
                     alt={blog.title}
                     className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -139,7 +139,7 @@ export default function BlogListingPage() {
                       {blog.title}
                     </CardTitle>
                     <CardDescription className="line-clamp-3">
-                      {blog.description}
+                      {blog.excerpt}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

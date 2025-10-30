@@ -37,7 +37,9 @@
   }
   html, body {
     overflow-x: hidden;
-    overscroll-behavior: contain;
+    height: 100%;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
@@ -185,4 +187,52 @@
 .ProseMirror img.editor-image:hover {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transform: scale(1.02);
+}
+
+/* Ensure content starts from the top */
+.prose > *:first-child {
+  margin-top: 0 !important;
+}
+
+.ProseMirror > *:first-child {
+  margin-top: 0 !important;
+}
+
+/* Ensure proper content flow and scrolling */
+.prose {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
+}
+
+.prose * {
+  max-width: 100%;
+}
+
+/* Prevent overscroll issues */
+* {
+  overscroll-behavior: none;
+}
+
+html {
+  overscroll-behavior: none;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+/* Ad container styling */
+.ad-container {
+  contain: layout style paint;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Responsive ad styling */
+@media (max-width: 1024px) {
+  .ad-container ins {
+    width: 100% !important;
+    min-width: 250px !important;
+  }
 }
