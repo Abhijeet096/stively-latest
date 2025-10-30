@@ -67,6 +67,7 @@ interface Blog {
   };
   views: number;
   likes: number;
+  likedBy: string[];
   createdAt: string;
 }
 
@@ -104,6 +105,7 @@ async function getBlog(slug: string): Promise<Blog | null> {
       author: blog.author,
       views: blog.views + 1,
       likes: blog.likes,
+      likedBy: blog.likedBy || [],
       createdAt: blog.createdAt
     };
   } catch (error) {
@@ -267,6 +269,7 @@ export default async function BlogPostPage({ params }: PageProps) {
                   slug={blog.slug}
                   initialLikes={blog.likes}
                   title={blog.title}
+                  likedBy={blog.likedBy}
                 />
               </div>
 

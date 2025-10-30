@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -14,6 +14,8 @@ import {
   Users,
   CheckSquare,
   Upload,
+  Menu,
+  X,
 } from 'lucide-react';
 
 export default function AdminLayoutClient({
@@ -24,6 +26,7 @@ export default function AdminLayoutClient({
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Redirect if not authenticated or not admin
@@ -103,15 +106,24 @@ export default function AdminLayoutClient({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-50">
-        <div className="px-8 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Stively Admin
-          </h1>
+        <div className="px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Stively Admin
+            </h1>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/"
               target="_blank"
-              className="text-gray-600 hover:text-gray-900 text-sm flex items-center gap-1"
+              className="hidden sm:inline text-gray-600 hover:text-gray-900 text-sm flex items-center gap-1"
             >
               🌍 View Site
             </Link>
@@ -125,10 +137,23 @@ export default function AdminLayoutClient({
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex relative">
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-64 bg-white border-r min-h-[calc(100vh-73px)] sticky top-[73px] self-start">
-          <nav className="p-4 space-y-1">
+        <aside className={`
+          fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r min-h-screen lg:min-h-[calc(100vh-73px)]
+          transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+          transition-transform duration-300 ease-in-out
+          lg:sticky lg:top-[73px] lg:self-start
+        `}>
+          <nav className="p-4 space-y-1 h-full lg:h-auto overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -139,6 +164,7 @@ export default function AdminLayoutClient({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setSidebarOpen(false)} // Close mobile sidebar on navigation
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-purple-100 text-purple-700 font-semibold'
@@ -154,7 +180,11 @@ export default function AdminLayoutClient({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 min-h-[calc(100vh-73px)]">{children}</main>
+        <main className="flex-1 min-h-[calc(100vh-73px)] lg:min-h-[calc(100vh-73px)]">
+          <div className="p-4 sm:p-6 lg:p-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

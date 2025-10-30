@@ -1,14 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import TiptapEditor from '@/components/editor/TiptapEditor';
-import { ArrowLeft, Send, Loader2, Upload } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+
+// Debounce utility function
+function debounce(func: Function, wait: number) {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default function SubmitArticlePage() {
   const { data: session } = useSession();
@@ -19,10 +32,14 @@ export default function SubmitArticlePage() {
     excerpt: '',
     category: 'Technology',
     tags: '',
+    customSlug: '', // Add custom slug field
   });
   const [content, setContent] = useState('');
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState('');
+  const [slugError, setSlugError] = useState('');
+  const [slugChecking, setSlugChecking] = useState(false);
+  const [slugValid, setSlugValid] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,6 +60,58 @@ export default function SubmitArticlePage() {
       .replace(/(^-|-$)/g, '');
   };
 
+  const getFinalSlug = () => {
+    return formData.customSlug.trim() || generateSlug(formData.title);
+  };
+
+  // Debounced slug checking
+  const checkSlugAvailability = async (slug: string) => {
+    if (!slug.trim()) {
+      setSlugError('');
+      setSlugValid(false);
+      return;
+    }
+
+    setSlugChecking(true);
+    setSlugError('');
+
+    try {
+      const response = await fetch('/api/blogs/check-slug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSlugValid(true);
+        setSlugError('');
+      } else {
+        setSlugValid(false);
+        setSlugError(data.error);
+      }
+    } catch (error) {
+      setSlugValid(false);
+      setSlugError('Failed to check slug availability');
+    } finally {
+      setSlugChecking(false);
+    }
+  };
+
+  // Debounce the slug checking
+  const debouncedCheckSlug = useMemo(
+    () => debounce(checkSlugAvailability, 500),
+    []
+  );
+
+  useEffect(() => {
+    const finalSlug = getFinalSlug();
+    if (finalSlug) {
+      debouncedCheckSlug(finalSlug);
+    }
+  }, [formData.customSlug, formData.title, debouncedCheckSlug]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -53,6 +122,13 @@ export default function SubmitArticlePage() {
 
     if (!formData.title.trim() || !content.trim() || content === '<p></p>') {
       alert('Title and content are required');
+      return;
+    }
+
+    // Check if slug is valid
+    const finalSlug = getFinalSlug();
+    if (slugError || (!slugValid && finalSlug !== generateSlug(formData.title))) {
+      alert('Please ensure the URL slug is valid and available');
       return;
     }
 
@@ -82,7 +158,7 @@ export default function SubmitArticlePage() {
 
       const articleData = {
         title: formData.title.trim(),
-        slug: generateSlug(formData.title),
+        slug: getFinalSlug(),
         content: content,
         excerpt: formData.excerpt.trim() || content.replace(/<[^>]*>/g, '').substring(0, 200),
         category: formData.category,
@@ -142,23 +218,23 @@ export default function SubmitArticlePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link href="/author" className="inline-flex items-center text-purple-600 hover:text-purple-700 mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Link>
-          <h1 className="text-3xl font-bold mb-2">Submit New Article</h1>
-          <p className="text-gray-600">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Submit New Article</h1>
+          <p className="text-gray-600 text-sm sm:text-base">
             Write your article and submit it for admin review. Once approved, it will be published on the site.
           </p>
         </div>
 
         {/* Form */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
             {/* Title */}
             <div>
               <Label htmlFor="title">Article Title *</Label>
@@ -172,13 +248,56 @@ export default function SubmitArticlePage() {
               />
             </div>
 
+            {/* Custom URL Slug */}
+            <div>
+              <Label htmlFor="customSlug">Custom URL Slug (Optional)</Label>
+              <div className="relative mt-2">
+                <Input
+                  id="customSlug"
+                  value={formData.customSlug}
+                  onChange={(e) => setFormData({ ...formData, customSlug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                  placeholder="custom-article-url"
+                  className={`pr-10 ${slugError ? 'border-red-300 focus:border-red-500' : slugValid ? 'border-green-300 focus:border-green-500' : ''}`}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  {slugChecking ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                  ) : slugValid ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : slugError ? (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  ) : null}
+                </div>
+              </div>
+              {slugError && (
+                <p className="text-sm text-red-600 mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {slugError}
+                </p>
+              )}
+              {slugValid && !slugError && (
+                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                  <CheckCircle className="w-4 h-4" />
+                  URL slug is available!
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-1">
+                Leave empty to auto-generate from title. Only use lowercase letters, numbers, and hyphens.
+              </p>
+            </div>
+
             {/* Auto-generated Slug Preview */}
             {formData.title && (
-              <div className="bg-blue-50 p-3 rounded-lg">
+              <div className={`p-3 rounded-lg border ${slugError ? 'bg-red-50 border-red-200' : slugValid ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'}`}>
                 <Label className="text-sm font-medium text-blue-800">Article URL will be:</Label>
-                <p className="text-blue-600 font-mono text-sm mt-1">
-                  /blog/{generateSlug(formData.title)}
+                <p className={`text-sm mt-1 font-mono ${slugError ? 'text-red-700' : slugValid ? 'text-green-700' : 'text-blue-700'}`}>
+                  /blog/{getFinalSlug()}
                 </p>
+                {formData.customSlug && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Using custom slug: "{formData.customSlug}"
+                  </p>
+                )}
               </div>
             )}
 
@@ -280,11 +399,11 @@ export default function SubmitArticlePage() {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end gap-4 pt-6 border-t">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-3 sm:gap-4 pt-4 sm:pt-6 border-t">
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 w-full sm:w-auto"
               >
                 {loading ? (
                   <>

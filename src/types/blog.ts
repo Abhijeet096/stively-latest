@@ -14,4 +14,5 @@ interface Blog {
   updatedAt: Date;
   views: number;
   likes: number;
+  likedBy: string[]; // Array of user IDs who liked this blog
 }

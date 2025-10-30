@@ -4,44 +4,66 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Heart, Share2, MessageCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { useSession } from "next-auth/react";
 
 interface BlogInteractionsProps {
   blogId: string;
   slug: string;
   initialLikes: number;
   title: string;
+  likedBy: string[];
 }
 
-export default function BlogInteractions({ blogId, slug, initialLikes, title }: BlogInteractionsProps) {
+export default function BlogInteractions({
+  blogId,
+  slug,
+  initialLikes,
+  title,
+  likedBy
+}: BlogInteractionsProps) {
+  const { data: session } = useSession();
   const [likeCount, setLikeCount] = useState(initialLikes);
   const [hasLiked, setHasLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    checkIfLiked();
-  }, [slug]);
-
-  function checkIfLiked() {
-    const liked = localStorage.getItem(`liked-${slug}`);
-    setHasLiked(liked === "true");
-  }
+    // Check if current user has liked this blog
+    if (session?.user && (session.user as any).id && likedBy.includes((session.user as any).id)) {
+      setHasLiked(true);
+    }
+  }, [session, likedBy]);
 
   async function handleLike() {
-    if (hasLiked) return;
+    if (!session?.user) {
+      toast.error("Please sign in to like this article");
+      return;
+    }
+
+    if (hasLiked || isLoading) return;
+
+    setIsLoading(true);
 
     try {
       const res = await fetch(`/api/blogs/${blogId}/like`, {
         method: "POST",
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        const data = await res.json();
         setLikeCount(data.likes);
         setHasLiked(true);
-        localStorage.setItem(`liked-${slug}`, "true");
         toast.success("Thanks for liking! ❤️");
+      } else if (res.status === 400 && data.error === "Already liked") {
+        setHasLiked(true);
+        toast.error("You've already liked this article");
+      } else {
+        toast.error(data.error || "Failed to like");
       }
     } catch (error) {
       toast.error("Failed to like");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -65,7 +87,7 @@ export default function BlogInteractions({ blogId, slug, initialLikes, title }: 
       <Button
         onClick={handleLike}
         variant={hasLiked ? "default" : "outline"}
-        disabled={hasLiked}
+        disabled={hasLiked || isLoading || !session?.user}
         className="flex items-center gap-2"
       >
         <Heart
@@ -74,7 +96,7 @@ export default function BlogInteractions({ blogId, slug, initialLikes, title }: 
         />
         <span>{likeCount}</span>
         <span className="hidden sm:inline">
-          {hasLiked ? "Liked" : "Like"}
+          {isLoading ? "Liking..." : hasLiked ? "Liked" : "Like"}
         </span>
       </Button>
 
